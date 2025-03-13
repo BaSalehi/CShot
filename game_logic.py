@@ -49,4 +49,39 @@ class Target(Parent):
         pygame.draw.circle(screen, self.color, (self.x, self.y), TARGET_RADIUS)
 
 class Game:
-    pass                
+    def __init__(self):
+        self.aim1 = Aim(200, 500, (0, 0, 255), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
+        self.aim2 = Aim(600, 500, (0, 255, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
+        self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (255, 0, 0)) for i in range(3)]
+        self.shots = {"player1": [], "player2": []}
+        self.running = True
+
+    def start(self):
+        pass
+    
+    def events(self):
+        keys_pressed = pygame.key.get_pressed()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.shots["player1"].append((self.aim1.x, self.aim1.y))
+                if event.key == pygame.K_SPACE:
+                    self.shots["player2"].append((self.aim2.x, self.aim2.y))
+
+        self.aim1.move(keys_pressed)
+        self.aim2.move(keys_pressed)
+
+    def update(self):
+        pass
+
+    def draw(self):
+        self.aim1.draw(screen)
+        self.aim2.draw(screen)
+        for target in self.targets:
+            target.draw(screen)
+        for shot in self.shots["player1"]:
+            pygame.draw.circle(screen, (0, 0, 255), shot, 3)
+        for shot in self.shots["player2"]:
+            pygame.draw.circle(screen, (0, 255, 0), shot, 3)
