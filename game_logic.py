@@ -57,7 +57,14 @@ class Game:
         self.running = True
 
     def start(self):
-        pass
+        clock = pygame.time.Clock()
+        while self.running:
+            screen.fill((255, 255, 255))
+            self.events()
+            self.update()
+            self.draw()
+            pygame.display.flip()
+            clock.tick(30)
     
     def events(self):
         keys_pressed = pygame.key.get_pressed()
@@ -74,7 +81,11 @@ class Game:
         self.aim2.move(keys_pressed)
 
     def update(self):
-        pass
+        for player, shots in self.shots.items():
+            for shot in shots:
+                for target in self.targets:
+                    if abs(shot[0] - target.x) <= TARGET_RADIUS and abs(shot[1] - target.y) <= TARGET_RADIUS:
+                        target.respawn()
 
     def draw(self):
         self.aim1.draw(screen)
@@ -85,3 +96,6 @@ class Game:
             pygame.draw.circle(screen, (0, 0, 255), shot, 3)
         for shot in self.shots["player2"]:
             pygame.draw.circle(screen, (0, 255, 0), shot, 3)
+
+game = Game()
+game.start()            
