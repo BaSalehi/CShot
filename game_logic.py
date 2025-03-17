@@ -1,10 +1,12 @@
 import pygame
 import random
+import time
 
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 PLAYER_SPEED = 5
 TARGET_RADIUS = 20
+TIME_LIMIT = 100
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -54,7 +56,10 @@ class Game:
         self.aim2 = Aim(600, 500, (0, 255, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
         self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (255, 0, 0)) for i in range(3)]
         self.shots = {"player1": [], "player2": []}
+        self.scores={"player1": 0, "player2": 0}
+        self.start_time=time.time()
         self.running = True
+        self.font= pygame.font.Font(None,36)
 
     def start(self):
         clock = pygame.time.Clock()
@@ -81,11 +86,19 @@ class Game:
         self.aim2.move(keys_pressed)
 
     def update(self):
+        elapsed_time=int(time.time()- self.start_time)
+        self.time_remaining= max(0,TIME_LIMIT - elapsed_time)
+
+        if self.time_remaining==0:
+            self.running=False
+            self.show_winner()
+        
         for player, shots in self.shots.items():
             for shot in shots:
                 for target in self.targets:
                     if abs(shot[0] - target.x) <= TARGET_RADIUS and abs(shot[1] - target.y) <= TARGET_RADIUS:
                         target.respawn()
+                        self.scores[player] +=1
 
     def draw(self):
         self.aim1.draw(screen)
@@ -96,6 +109,13 @@ class Game:
             pygame.draw.circle(screen, (0, 0, 255), shot, 3)
         for shot in self.shots["player2"]:
             pygame.draw.circle(screen, (0, 255, 0), shot, 3)
+
+        score_text = f"player 1: {self.scores['player1']} | player 2: {self.scores['player2']} | Time: {self.time_remaining}s"
+        text_surface = self.font.render(score_text, True, (0,0,0))
+        screen.blit(text_surface, (20, 10)) 
+
+    def show_winner(self):
+        pass 
 
 game = Game()
 game.start()            
