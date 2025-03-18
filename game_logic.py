@@ -94,27 +94,31 @@ class Game:
             self.show_winner()
         
         for player in ["player1", "player2"]:
-            if self.shots[player]:
-                last_shot = self.shots[player][-1]  
-                nearest_target = min(self.targets, key=lambda target: math.dist(last_shot, (target.x, target.y))) 
-                distance = math.dist(last_shot, (nearest_target.x, nearest_target.y))
+            if len(self.shots[player]) < 2:  
+                continue  
+
+            last_shot = self.shots[player][-2]  
+            current_shot = self.shots[player][-1]  
+            for target in self.targets:  
+                distance = math.dist(current_shot, (target.x, target.y)) 
 
                 if distance <= TARGET_RADIUS:  
-                    if distance < 5:
+                    shot_distance = math.dist(last_shot, current_shot)  
+                
+                    if shot_distance < 30:
                         score = 1
-                    elif distance < 10:
+                    elif shot_distance < 80:
                         score = 2
-                    elif distance < 15:
+                    elif shot_distance < 150:
                         score = 3
-                    elif distance < 20:
+                    elif shot_distance < 250:
                         score = 4
                     else:
                         score = 5
-
-                    self.scores[player] += score 
-                    nearest_target.respawn()   
-                    self.shots[player].pop()  
-                    print(distance)
+                    self.scores[player] += score  
+                    target.respawn()  
+                    print(shot_distance)
+                    break
 
     def draw(self):
         self.aim1.draw(screen)
