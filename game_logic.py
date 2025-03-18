@@ -1,7 +1,7 @@
 import pygame
 import random
 import time
-
+import math
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 PLAYER_SPEED = 5
@@ -93,12 +93,28 @@ class Game:
             self.running=False
             self.show_winner()
         
-        for player, shots in self.shots.items():
-            for shot in shots:
-                for target in self.targets:
-                    if abs(shot[0] - target.x) <= TARGET_RADIUS and abs(shot[1] - target.y) <= TARGET_RADIUS:
-                        target.respawn()
-                        self.scores[player] +=1
+        for player in ["player1", "player2"]:
+            if self.shots[player]:
+                last_shot = self.shots[player][-1]  
+                nearest_target = min(self.targets, key=lambda target: math.dist(last_shot, (target.x, target.y))) 
+                distance = math.dist(last_shot, (nearest_target.x, nearest_target.y))
+
+                if distance <= TARGET_RADIUS:  
+                    if distance < 5:
+                        score = 1
+                    elif distance < 10:
+                        score = 2
+                    elif distance < 15:
+                        score = 3
+                    elif distance < 20:
+                        score = 4
+                    else:
+                        score = 5
+
+                    self.scores[player] += score 
+                    nearest_target.respawn()   
+                    self.shots[player].pop()  
+                    print(distance)
 
     def draw(self):
         self.aim1.draw(screen)
@@ -115,7 +131,20 @@ class Game:
         screen.blit(text_surface, (20, 10)) 
 
     def show_winner(self):
-        pass 
+        screen.fill((255,255,255))
+        winner_text="Game Over!"
+        if self.scores["player1"]>self.scores["player2"]:
+            winner_text +="Player 1 Won!"
+        elif self.scores["player1"]<self.scores["player2"]:
+            winner_text+="Player 2 Won!" 
+        else:
+            winner_text+="It's a Tie!"   
+
+        text_surface= self.font.render(winner_text, True, (255,0,0))
+        screen.blit(text_surface, (SCREEN_WIDTH//2 - 100 , SCREEN_HEIGHT//2))  
+        pygame.display.flip()
+        pygame.time.delay(5000)
+        pygame.quit() 
 
 game = Game()
 game.start()            
