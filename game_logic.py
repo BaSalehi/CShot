@@ -69,14 +69,14 @@ class black_target_item(Target):
 # sub time
 class bronz_target_item(Target):
     pass
-# #add time
+#add time
 
 
 class Game:
     def __init__(self):
         self.aim1 = Aim(200, 500, (0, 0, 255), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
         self.aim2 = Aim(600, 500, (0, 255, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
-        self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (255, 0, 0)) for i in range(3)]
+        self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (34, 139, 34)) for i in range(3)] 
         self.targets.append(silver_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(5, SCREEN_HEIGHT//2), (192,192,192)))
         self.shots = {"player1": [], "player2": []}
     
@@ -87,12 +87,12 @@ class Game:
         self.running = True
         self.font= pygame.font.Font(None,36)
         self.last_black_spawn = pygame.time.get_ticks()
-        self.black_target= None
+        self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (0, 0, 0)) 
 
     def start(self):
         clock = pygame.time.Clock()
         while self.running:
-            screen.fill((255, 255, 255))
+            screen.fill((139, 0, 0)) 
             self.events()
             self.update()
             self.draw()
