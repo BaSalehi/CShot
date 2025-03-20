@@ -74,8 +74,10 @@ class bronz_target_item(Target):
 
 class Game:
     def __init__(self):
-        self.aim1 = Aim(200, 500, (0, 0, 255), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
-        self.aim2 = Aim(600, 500, (0, 255, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.aim1 = Aim(200, 500, (139, 0, 0), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
+        self.aim2 = Aim(600, 500, (139, 0, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
         self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (34, 139, 34)) for i in range(3)] 
         self.targets.append(silver_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(5, SCREEN_HEIGHT//2), (192,192,192)))
         self.shots = {"player1": [], "player2": []}
@@ -92,7 +94,7 @@ class Game:
     def start(self):
         clock = pygame.time.Clock()
         while self.running:
-            screen.fill((139, 0, 0)) 
+            self.screen.fill((139, 0, 0)) 
             self.events()
             self.update()
             self.draw()
@@ -172,25 +174,25 @@ class Game:
                             self.black_target = None
 
     def draw(self):
-        self.aim1.draw(screen)
-        self.aim2.draw(screen)
+        self.aim1.draw(self.screen)
+        self.aim2.draw(self.screen)
         for target in self.targets:
-            target.draw(screen)
+            target.draw(self.screen)
         for shot in self.shots["player1"]:
-            pygame.draw.circle(screen, (0, 0, 255), shot, 3)
+            pygame.draw.circle(self.screen, (0, 0, 255), shot, 3)
         for shot in self.shots["player2"]:
-            pygame.draw.circle(screen, (0, 255, 0), shot, 3)
+            pygame.draw.circle(self.screen, (0, 255, 0), shot, 3)
         if self.black_target:
-            self.black_target.draw(screen)    
+            self.black_target.draw(self.screen)    
 
         font=pygame.font.Font(None, 36)    
         text_p1 = font.render(f"Player 1 - Score: {self.scores['player1']}  Time: {self.time_remaining['player1']}", True, (0, 0, 255))
         text_p2 = font.render(f"Player 2 - Score: {self.scores['player2']}  Time: {self.time_remaining['player2']}", True, (0, 255, 0))
 
-        screen.blit(text_p1, (20, 10))
-        screen.blit(text_p2, (20, 50)) 
+        self.screen.blit(text_p1, (20, 10))
+        self.screen.blit(text_p2, (20, 50)) 
     def show_winner(self):
-        screen.fill((255,255,255))
+        self.screen.fill((255,255,255))
         winner_text="Game Over!"
         if self.scores["player1"]>self.scores["player2"]:
             winner_text +="Player 1 Won!"
@@ -200,10 +202,11 @@ class Game:
             winner_text+="It's a Tie!"   
 
         text_surface= self.font.render(winner_text, True, (255,0,0))
-        screen.blit(text_surface, (SCREEN_WIDTH//2 - 100 , SCREEN_HEIGHT//2))  
+        self.screen.blit(text_surface, (SCREEN_WIDTH//2 - 100 , SCREEN_HEIGHT//2))  
         pygame.display.flip()
         pygame.time.delay(5000)
         pygame.quit() 
 
-game = Game()
-game.start()            
+if __name__ == "__main__": 
+    game = Game()
+    game.start()
