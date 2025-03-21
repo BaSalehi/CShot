@@ -114,6 +114,8 @@ class LoginPage:
             self.clock.tick(30)
 
     def validate_usernames(self):
+        global user1
+        global user2
         user1 = self.input_box1.text.strip()
         user2 = self.input_box2.text.strip()
         
@@ -149,8 +151,8 @@ class LoginPage:
         pygame.init()
         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
-        # Start the game
-        game = Game()
+        # Start the game with the given users
+        game = Game(user1, user2)
         game.start()
 
 if __name__ == "__main__":
