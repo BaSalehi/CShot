@@ -104,6 +104,7 @@ class Game:
         self.silver_spawn_time_out = 20000
         self.silver_spawn_time_in = 15000
         self.silver_visible_since = None
+        self.last_silver_spawn_time = pygame.time.get_ticks()
 
         self.user1 = user1
         self.user2 = user2
@@ -162,13 +163,37 @@ class Game:
             for player in [self.user1, self.user2]:
                 self.time_remaining[player] = max(0, self.time_remaining[player] - 1)  
             self.last_update_time = current_time  
+
             if self.time_remaining[player]==0:
                 self.running=False
                 self.show_winner()
-        if self.black_target is None and (current_time - self.last_black_spawn >= 25000):
-            self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT//2), (0,0,0))
 
+        if self.bullets[self.user1] == 0 and self.bullets[self.user2] == 0:
+            self.running = False
+            self.show_winner()
+            return 
         
+        if self.black_target is None and (current_time - self.last_black_spawn_time >= 25000):
+            # self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT//2), (0,0,0))
+            x, y = Target.safe_respawn(self.targets + ([self.silver_target] if self.silver_target else []))
+            self.black_target = black_target_item(x, y, (0, 0, 0))
+            self.black_visible_since = current_time 
+        
+        if self.black_target  and (current_time - self.black_visible_since >= 15000):
+            self.black_target = None
+            self.last_black_spawn_time = current_time 
+
+        if self.silver_target is None and (current_time - self.last_silver_spawn_time >= 20000):
+            # self.silver_target = silver_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (192, 192, 192))
+            x, y = Target.safe_respawn(self.targets + ([self.black_target] if self.black_target else []))
+            self.silver_target = silver_target_item(x, y, (192, 192, 192))     
+            # self.silver_spawn_time_out = current_time
+            self.silver_visible_since = current_time
+        
+        if self.silver_target and ( current_time - self.silver_visible_since >= 15000):
+            self.silver_target = None
+            self.last_silver_spawn_time = current_time
+
         for player in [self.user1, self.user2]:
             if len(self.shots[player]) < 2:  
                 continue  
@@ -184,9 +209,9 @@ class Game:
                     if isinstance(target, silver_target_item):
                         self.time_remaining[player] = min(300, self.time_remaining[player] + 10)    
                     
-                    if shot_distance < 30:
+                    if shot_distance < 50:
                         score = 1
-                    elif shot_distance < 80:
+                    elif shot_distance < 100:
                         score = 2
                     elif shot_distance < 150:
                         score = 3
@@ -196,23 +221,34 @@ class Game:
                         score = 5
 
                     self.scores[player] += score  
-                    target.respawn()  
+                    target.respawn(self.targets)  
                     print(shot_distance)
                     break  
+                
+        if self.black_target:
+            self.black_target.move()
 
-                if self.black_target:
-                    self.black_target.move()
+            for player in [self.user1, self.user2]:
+                distance_aim = math.dist((self.aim1.x, self.aim1.y) if player == self.user1 else (self.aim2.x, self.aim2.y), (self.black_target.x, self.black_target.y))
+                if distance_aim <= TARGET_RADIUS:
+                    self.time_remaining[player] = max(0, self.time_remaining[player] - self.black_target.time_penalty)
+                    self.black_target = None
+                    self.last_black_spawn_time = current_time
+
+
+                # if self.black_target:
+                #     self.black_target.move()
                     
-                    distance_aim1 = math.dist((self.aim1.x, self.aim1.y), (self.black_target.x, self.black_target.y))
-                    if distance_aim1 <= TARGET_RADIUS :
-                        self.time_remaining[self.user1] = max(0, self.time_remaining[self.user1] - self.black_target.time_penalty)
-                        self.black_target = None
+                #     distance_aim1 = math.dist((self.aim1.x, self.aim1.y), (self.black_target.x, self.black_target.y))
+                #     if distance_aim1 <= TARGET_RADIUS :
+                #         self.time_remaining[self.user1] = max(0, self.time_remaining[self.user1] - self.black_target.time_penalty)
+                #         self.black_target = None
                   
-                    if self.black_target:  
-                        distance_aim2 = math.dist((self.aim2.x, self.aim2.y), (self.black_target.x, self.black_target.y))
-                        if distance_aim2 <= TARGET_RADIUS :
-                            self.time_remaining[self.user2] = max(0, self.time_remaining[self.user2] - self.black_target.time_penalty)
-                            self.black_target = None
+                #     if self.black_target:  
+                #         distance_aim2 = math.dist((self.aim2.x, self.aim2.y), (self.black_target.x, self.black_target.y))
+                #         if distance_aim2 <= TARGET_RADIUS :
+                #             self.time_remaining[self.user2] = max(0, self.time_remaining[self.user2] - self.black_target.time_penalty)
+                #             self.black_target = None
 
     def draw(self):
         self.aim1.draw(self.screen)
