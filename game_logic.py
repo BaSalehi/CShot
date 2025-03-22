@@ -47,6 +47,20 @@ class Target(Parent):
     def respawn(self):
         self.x = random.randint(50, SCREEN_WIDTH - 50)
         self.y = random.randint(50, SCREEN_HEIGHT // 2)
+    
+    @staticmethod
+    def safe_respawn(existing_targets, radius=TARGET_RADIUS):
+        while True:
+            x = random.randint(50, SCREEN_WIDTH - 50)
+            y = random.randint(50, SCREEN_HEIGHT // 2)    
+            overlap = False
+            for target in existing_targets:
+                dist = math.dist((x, y), (target.x, target.y))
+                if dist < radius * 2 + 10:
+                    overlap = True
+                    break
+            if not overlap:
+                return x, y 
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), TARGET_RADIUS)
@@ -78,19 +92,43 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.aim1 = Aim(200, 500, (139, 0, 0), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
         self.aim2 = Aim(600, 500, (139, 0, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
-        self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (34, 139, 34)) for i in range(3)] 
-        self.targets.append(silver_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(5, SCREEN_HEIGHT//2), (192,192,192)))
+        # self.targets = [Target(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (34, 139, 34)) for i in range(3)] 
+        # self.targets.append(silver_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(5, SCREEN_HEIGHT//2), (192,192,192)))
+        self.targets = []
+        for i in range(3):
+            x, y = Target.safe_respawn(self.targets)
+            self.targets.append(Target(x, y, (255, 0, 0)))
         self.shots = {user1: [], user2: []}
+        
+        self.silver_target = None
+        self.silver_spawn_time_out = 20000
+        self.silver_spawn_time_in = 15000
+        self.silver_visible_since = None
+
         self.user1 = user1
         self.user2 = user2
         self.scores={user1: 0, user2: 0}
-        self.time_remaining={self.user1: 300, self.user2: 300}
+        self.time_remaining={self.user1: 100, self.user2: 100}
+
         self.last_update_time=pygame.time.get_ticks()
         self.start_time=time.time()
         self.running = True
         self.font= pygame.font.Font(None,36)
-        self.last_black_spawn = pygame.time.get_ticks()
-        self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (0, 0, 0)) 
+
+        self.black_target= None
+        self.black_visible_since = None
+        self.last_black_spawn_time = pygame.time.get_ticks()
+        self.black_target_time_out = 20000
+        self.black_target_time_in = 15000
+        # self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (0, 0, 0)) 
+
+        self.bullets = {self.user1: 10, self.user2: 10}
+
+        self.bronze_target = None
+        self.last_bronze_spawn_time = pygame.time.get_ticks()
+        self.bronze_item_time_in = 15000
+        self.bronze_target_time_out = 20000 
+        self.aim_visible_until = {self.user1: 0, self.user2: 0}
 
     def start(self):
         clock = pygame.time.Clock()
@@ -108,10 +146,12 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0:
                     self.shots[self.user1].append((self.aim1.x, self.aim1.y))
-                if event.key == pygame.K_RETURN:
+                    self.bullets[self.user1] -= 1
+                if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0:
                     self.shots[self.user2].append((self.aim2.x, self.aim2.y))
+                    self.bullets[self.user2] -= 1
 
         self.aim1.move(keys_pressed)
         self.aim2.move(keys_pressed)
