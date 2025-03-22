@@ -10,7 +10,7 @@ TARGET_RADIUS = 20
 TIME_LIMIT = 100
 
 pygame.init()
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+display = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 class Parent:
     def __init__(self, x, y, color):
@@ -44,10 +44,12 @@ class Target(Parent):
     def __init__(self, x, y, color):
         super().__init__(x, y, color)
 
-    def respawn(self):
-        self.x = random.randint(50, SCREEN_WIDTH - 50)
-        self.y = random.randint(50, SCREEN_HEIGHT // 2)
-    
+    def respawn(self, existing_targets):
+        self.x, self.y = Target.safe_respawn(existing_targets)
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, self.color, (self.x, self.y), TARGET_RADIUS)
+
     @staticmethod
     def safe_respawn(existing_targets, radius=TARGET_RADIUS):
         while True:
@@ -62,15 +64,13 @@ class Target(Parent):
             if not overlap:
                 return x, y 
 
-    def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (self.x, self.y), TARGET_RADIUS)
-
+#adds score and time
 class silver_target_item(Target):
     def __init__(self, x, y, color, time_bonus=5):
         super().__init__(x, y, color)
         self.time_bonus=time_bonus
 
-#add score and time
+# subs time
 class black_target_item(Target):
     def __init__(self, x, y, color, time_penalty = 5):
         super().__init__(x, y, color)
@@ -81,8 +81,14 @@ class black_target_item(Target):
         if self.x <= TARGET_RADIUS or self.x >= SCREEN_WIDTH - TARGET_RADIUS:
             self.vx *= -1 
 
+# shows the aim
 class bronze_target_item(Target):
     def __init__(self, x, y, color=(205, 127, 50)):
+        super().__init__(x, y, color)
+
+# adds bullet
+class gold_target_item(Target):
+    def __init(self, x, y, color=(255, 215, 0)):
         super().__init__(x, y, color)
 
 class Game:
@@ -128,7 +134,14 @@ class Game:
         self.last_bronze_spawn_time = pygame.time.get_ticks()
         self.bronze_item_time_in = 15000
         self.bronze_target_time_out = 20000 
+
+        self.gold_target = None
+        self.last_gold_spawn_time = pygame.time.get_ticks()
+        self.gold_target_time_out = 15000  
+        self.gold_target_time_in = 20000 
+
         self.aim_visible_until = {self.user1: 0, self.user2: 0}
+        self.previous_shot_hit = {self.user1: False, self.user2: False}
 
     def start(self):
         clock = pygame.time.Clock()
@@ -202,6 +215,15 @@ class Game:
             self.bronze_target = None
             self.last_bronze_spawn_time = current_time 
 
+        if self.gold_target is None and (current_time - self.last_gold_spawn_time >= 30000):
+            x, y = Target.safe_respawn(self.targets + ([self.silver_target] if self.silver_target else []) + ([self.black_target] if self.black_target else []) + ([self.bronze_target] if self.bronze_target else []))
+            self.gold_target = gold_target_item(x, y, (255, 215, 0))
+            self.gold_visible_since = current_time
+
+        if self.gold_target and (current_time - self.gold_visible_since >= 10000):
+            self.gold_target = None
+            self.last_gold_spawn_time = current_time  
+
         for player in [self.user1, self.user2]:
             if len(self.shots[player]) < 2:  
                 continue  
@@ -258,29 +280,50 @@ class Game:
                     self.aim_visible_until[player] = current_time + 10000 
                     self.bronze_target = None
                     self.last_bronze_spawn_time = current_time            
-                                            
+
+        for player in [self.user1, self.user2]:
+            if self.gold_target:
+                distance_aim = math.dist((self.aim1.x, self.aim1.y) if player == self.user1 else (self.aim2.x, self.aim2.y), (self.gold_target.x, self.gold_target.y))
+                if distance_aim <= TARGET_RADIUS:
+                    self.bullets[player] = min(30, self.bullets[player] + 5) 
+                    self.gold_target = None
+                    self.last_gold_spawn_time = current_time             
 
     def draw(self):
         self.aim1.draw(self.screen)
         self.aim2.draw(self.screen)
+
+        current_time = pygame.time.get_ticks()
+        if current_time < self.aim_visible_until[self.user1]:
+            GraphicsHelper.draw_crosshair(self.screen, (self.aim1.x, self.aim1.y), color=(0, 0, 255))
+        if current_time < self.aim_visible_until[self.user2]:
+            GraphicsHelper.draw_crosshair(self.screen, (self.aim2.x, self.aim2.y), color=(0, 255, 0))
+
         for target in self.targets:
             target.draw(self.screen)
         for shot in self.shots[self.user1]:
             pygame.draw.circle(self.screen, (0, 0, 255), shot, 3)
         for shot in self.shots[self.user2]:
             pygame.draw.circle(self.screen, (0, 255, 0), shot, 3)
+
         if self.black_target:
             self.black_target.draw(self.screen)    
+        if self.bronze_target:
+            self.bronze_target.draw(self.screen)
+        if self.silver_target:
+            self.silver_target.draw(self.screen) 
+        if self.gold_target:
+            self.gold_target.draw(self.screen)
 
         font=pygame.font.Font(None, 36)    
-        text_p1 = font.render(f"{self.user1} - Score: {self.scores[self.user1]}  Time: {self.time_remaining[self.user1]}", True, (0, 0, 255))
-        text_p2 = font.render(f"{self.user2} - Score: {self.scores[self.user2]}  Time: {self.time_remaining[self.user2]}", True, (0, 255, 0))
+        text_p1 = font.render(f"{self.user1} - Score: {self.scores[self.user1]}  Time: {self.time_remaining[self.user1]} Bullets: {self.bullets[self.user1]}", True, (0, 0, 255))
+        text_p2 = font.render(f"{self.user2} - Score: {self.scores[self.user2]}  Time: {self.time_remaining[self.user2]} Bullets: {self.bullets[self.user2]}", True, (0, 255, 0))
 
         self.screen.blit(text_p1, (20, 10))
         self.screen.blit(text_p2, (20, 50)) 
     def show_winner(self):
         self.screen.fill((255,255,255))
-        winner_text="Game Over!"
+        winner_text="Game Over! "
         if self.scores[self.user1]>self.scores[self.user2]:
             winner_text += f"{self.user1} Won!"
         elif self.scores[self.user1]<self.scores[self.user2]:
@@ -293,6 +336,12 @@ class Game:
         pygame.display.flip()
         pygame.time.delay(5000)
         pygame.quit() 
+
+class GraphicsHelper:
+    @staticmethod
+    def draw_crosshair(surface, position, color=(0, 0, 0)):
+        pygame.draw.line(surface, color, (position[0] - 10, position[1]), (position[0] + 10, position[1]), 2)
+        pygame.draw.line(surface, color, (position[0], position[1] - 10), (position[0], position[1] + 10), 2)        
 
 if __name__ == "__main__": 
     game = Game()
