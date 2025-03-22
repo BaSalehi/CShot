@@ -94,6 +94,14 @@ class gold_target_item(Target):
 class Game:
     def __init__(self, user1, user2):
         pygame.init()
+        pygame.mixer.init()
+        
+        self.start_game_sound = pygame.mixer.Sound("start-game-sound.wav")
+        self.shot_sound = pygame.mixer.Sound("shot-sound.wav")
+        self.end_game_sound = pygame.mixer.Sound("end-game-sound.wav") 
+        
+        self.start_game_sound.play()
+
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.aim1 = Aim(200, 500, (139, 0, 0), {"left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s})
         self.aim2 = Aim(600, 500, (139, 0, 0), {"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN})
@@ -162,9 +170,11 @@ class Game:
                 if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0:
                     self.shots[self.user1].append((self.aim1.x, self.aim1.y))
                     self.bullets[self.user1] -= 1
+                    self.shot_sound.play()
                 if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0:
                     self.shots[self.user2].append((self.aim2.x, self.aim2.y))
                     self.bullets[self.user2] -= 1
+                    self.shot_sound.play()
 
         self.aim1.move(keys_pressed)
         self.aim2.move(keys_pressed)
@@ -322,6 +332,7 @@ class Game:
         self.screen.blit(text_p1, (20, 10))
         self.screen.blit(text_p2, (20, 50)) 
     def show_winner(self):
+        self.end_game_sound.play()
         self.screen.fill((255,255,255))
         winner_text="Game Over! "
         if self.scores[self.user1]>self.scores[self.user2]:

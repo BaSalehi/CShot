@@ -15,17 +15,19 @@ FONT = pygame.font.Font(None, 32)
 ERROR_FONT = pygame.font.Font(None, 24)
 
 class InputBox:
-    def __init__(self, x, y, width, height, label):
+    def __init__(self, x, y, width, height, label, click_sound):
         self.rect = pygame.Rect(x, y, width, height)
         self.color = GRAY
         self.text = ''
         self.label = label
         self.active = False
- 
+        self.click_sound = click_sound
+
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.active = not self.active
+                self.click_sound.play()
             else:
                 self.active = False
             self.color = WHITE if self.active else GRAY
@@ -48,11 +50,12 @@ class InputBox:
 
 
 class Button:
-    def __init__(self, x, y, width, height, text, color=BLACK):
+    def __init__(self, x, y, width, height, text, click_sound, color=BLACK):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
-    
+        self.click_sound = click_sound
+
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
         txt_surface = FONT.render(self.text, True, WHITE)
@@ -61,17 +64,24 @@ class Button:
     def is_clicked(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
+                self.click_sound.play()
                 return True
         return False
     
 class LoginPage:
     def __init__(self, width, height):
+        pygame.mixer.init()
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Login Page")
+
+        self.click_sound = pygame.mixer.Sound("click-sound.wav")
+        self.start_login_sound = pygame.mixer.Sound("start-login-sound.wav")
+
+        self.start_login_sound.play()
         self.clock = pygame.time.Clock()
-        self.input_box1 = InputBox(300, 200, 200, 32, "User 1:")
-        self.input_box2 = InputBox(300, 300, 200, 32, "User 2:")
-        self.continue_button = Button(300, 400, 200, 50, "Continue")
+        self.input_box1 = InputBox(300, 200, 200, 32, "User 1:", self.click_sound)
+        self.input_box2 = InputBox(300, 300, 200, 32, "User 2:", self.click_sound)
+        self.continue_button = Button(300, 400, 200, 50, "Continue", self.click_sound)
         self.running = True
         self.error_message = ""
         self.new_users = []
@@ -88,6 +98,7 @@ class LoginPage:
                 self.input_box2.handle_event(event)
 
                 if self.continue_button.is_clicked(event):
+                    self.click_sound.play()
                     if self.validate_usernames():
                         self.save_usernames()
                         self.running = False  
