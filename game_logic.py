@@ -75,7 +75,7 @@ class black_target_item(Target):
     def __init__(self, x, y, color, time_penalty = 5):
         super().__init__(x, y, color)
         self.time_penalty = time_penalty
-        self.vx = random.choice([-3, 3])
+        self.vx = random.choice([-5, 5])
     def move(self):
         self.x += self.vx
         if self.x <= TARGET_RADIUS or self.x >= SCREEN_WIDTH - TARGET_RADIUS:
@@ -201,13 +201,13 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0 and self.time_remaining["player1"] > 0:
+                if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0 and self.time_remaining[self.user1] > 0:
                     self.shots[self.user1].append((self.aim1.x, self.aim1.y))
-                    self.add_bullets("player1", -1)
+                    self.add_bullets(self.user1, -1)
                     self.shot_sound.play()
-                if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0 and self.time_remaining["player2"] > 0:
+                if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0 and self.time_remaining[self.user2] > 0:
                     self.shots[self.user2].append((self.aim2.x, self.aim2.y))
-                    self.add_bullets("player2", -1)
+                    self.add_bullets(self.user2, -1)
                     self.shot_sound.play()
 
         self.aim1.move(keys_pressed)
@@ -220,7 +220,7 @@ class Game:
                 self.time_remaining[player] = max(0, self.time_remaining[player] - 1)  
             self.last_update_time = current_time  
 
-        if self.time_remaining["player1"] == 0 and self.time_remaining["player2"] == 0:
+        if self.time_remaining[self.user1] == 0 and self.time_remaining[self.user2] == 0:
             self.running=False
             self.show_winner()
 
