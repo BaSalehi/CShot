@@ -136,7 +136,7 @@ class Game:
         self.black_target_time_in = 15000
         # self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT // 2), (0, 0, 0)) 
 
-        self.bullets = {self.user1: 10, self.user2: 10}
+        self.bullets = {self.user1: 15, self.user2: 15}
 
         self.bronze_target = None
         self.last_bronze_spawn_time = pygame.time.get_ticks()
