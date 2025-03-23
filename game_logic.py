@@ -269,12 +269,13 @@ class Game:
             self.last_gold_spawn_time = current_time  
 
         for player in [self.user1, self.user2]:
-            if len(self.shots[player]) < 2:  
+            if len(self.shots[player]) == 0:  
                 continue  
 
-            last_shot = self.shots[player][-2]  
-            current_shot = self.shots[player][-1]  
-
+              
+            current_shot = self.shots[player][-1] 
+            last_shot = self.shots[player][-2]  if len(self.shots[player]) >= 2 else current_shot
+            
             hit_found = False
             # previous_score = self.scores[player]
             for target in self.targets:  
@@ -296,7 +297,8 @@ class Game:
             #     self.previous_shot_hit[player] = False
         
             if not hit_found:
-                self.set_previous_shot_hit(player, False)
+                self.set_previous_shot_hit(player, False)  
+
 
         if self.black_target:
             self.black_target.move()  
