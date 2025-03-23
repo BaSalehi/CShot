@@ -4,6 +4,32 @@ import time
 import math
 clock=pygame.time.Clock()
 
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime
+
+Base = declarative_base()
+
+class Winner(Base):
+    __tablename__ = 'winners'
+    id = Column(Integer, primary_key=True)
+    player_name = Column(String(50))
+    score = Column(Integer)
+    game_date = Column(DateTime, default=datetime.utcnow)
+
+
+engine = create_engine('postgresql+pg8000://postgres:0880450789asnii@localhost/cshot_winners')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+
+def save_winner(player_name, score):
+    session = Session()
+    new_winner = Winner(player_name=player_name, score=score)
+    session.add(new_winner)
+    session.commit()
+    session.close()
+
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 PLAYER_SPEED = 5
 TARGET_RADIUS = 20
@@ -64,7 +90,7 @@ class Target(Parent):
             if not overlap:
                 return x, y 
 
-#adds score and time
+#add score and time
 class silver_target_item(Target):
     def __init__(self, x, y, color, time_bonus=5):
         super().__init__(x, y, color)
@@ -370,6 +396,13 @@ class Game:
     def show_winner(self):
         self.end_game_sound.play()
         self.screen.fill((255,255,255))
+
+        if self.scores[self.user1] > self.scores[self.user2]:
+            save_winner(self.user1, self.scores[self.user1])
+        elif self.scores[self.user1] < self.scores[self.user2]:
+            save_winner(self.user2, self.scores[self.user2])
+
+
         winner_text="Game Over! "
         if self.scores[self.user1]>self.scores[self.user2]:
             winner_text += f"{self.user1} Won!"
