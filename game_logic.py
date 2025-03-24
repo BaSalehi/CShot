@@ -412,7 +412,8 @@ class Game:
             winner_text+="It's a Tie!"   
 
         text_surface= self.font.render(winner_text, True, (255,0,0))
-        self.screen.blit(text_surface, (SCREEN_WIDTH//2 - 100 , SCREEN_HEIGHT//2))  
+        text_rect = text_surface.get_rect(center=(400, 300))
+        self.screen.blit(text_surface, text_rect)  
         pygame.display.flip()
         pygame.time.delay(5000)
         pygame.quit() 
