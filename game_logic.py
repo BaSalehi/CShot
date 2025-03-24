@@ -4,6 +4,32 @@ import time
 import math
 clock=pygame.time.Clock()
 
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime
+
+Base = declarative_base()
+
+class Winner(Base):
+    __tablename__ = 'winners'
+    id = Column(Integer, primary_key=True)
+    player_name = Column(String(50))
+    score = Column(Integer)
+    game_date = Column(DateTime, default=datetime.utcnow)
+
+
+engine = create_engine('postgresql+pg8000://postgres:0880450789asnii@localhost/cshot_winners')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+
+def save_winner(player_name, score):
+    session = Session()
+    new_winner = Winner(player_name=player_name, score=score)
+    session.add(new_winner)
+    session.commit()
+    session.close()
+
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 PLAYER_SPEED = 5
 TARGET_RADIUS = 20
@@ -64,7 +90,7 @@ class Target(Parent):
             if not overlap:
                 return x, y 
 
-#adds score and time
+#add score and time
 class silver_target_item(Target):
     def __init__(self, x, y, color, time_bonus=5):
         super().__init__(x, y, color)
@@ -75,7 +101,7 @@ class black_target_item(Target):
     def __init__(self, x, y, color, time_penalty = 5):
         super().__init__(x, y, color)
         self.time_penalty = time_penalty
-        self.vx = random.choice([-3, 3])
+        self.vx = random.choice([-5, 5])
     def move(self):
         self.x += self.vx
         if self.x <= TARGET_RADIUS or self.x >= SCREEN_WIDTH - TARGET_RADIUS:
@@ -151,6 +177,40 @@ class Game:
         self.aim_visible_until = {self.user1: 0, self.user2: 0}
         self.previous_shot_hit = {self.user1: False, self.user2: False}
 
+    def get_score(self, player):
+        return self.scores[player]
+
+    def add_score(self, player, amount):
+        self.scores[player] += amount
+
+    def get_bullets(self, player):
+        return self.bullets[player]
+
+    def add_bullets(self, player, amount):
+        self.bullets[player] = min(30, self.bullets[player] + amount)
+
+    def set_previous_shot_hit(self, player, value: bool):
+        self.previous_shot_hit[player] = value     
+
+    def calculate_shot_score(self, player, shot_distance, previous_hit):
+        if shot_distance < 50:
+            score = 1
+        elif shot_distance < 100:
+            score = 2
+        elif shot_distance < 150:
+            score = 3
+        elif shot_distance < 250:
+            score = 4
+        else:
+            score = 5
+
+        if previous_hit:
+            score += 2
+            print(f" +2 points for {player}")
+
+        return score
+    
+
     def start(self):
         clock = pygame.time.Clock()
         while self.running:
@@ -167,13 +227,13 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0:
+                if event.key == pygame.K_SPACE and self.bullets[self.user1] > 0 and self.time_remaining[self.user1] > 0:
                     self.shots[self.user1].append((self.aim1.x, self.aim1.y))
-                    self.bullets[self.user1] -= 1
+                    self.add_bullets(self.user1, -1)
                     self.shot_sound.play()
-                if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0:
+                if event.key == pygame.K_RETURN and self.bullets[self.user2] > 0 and self.time_remaining[self.user2] > 0:
                     self.shots[self.user2].append((self.aim2.x, self.aim2.y))
-                    self.bullets[self.user2] -= 1
+                    self.add_bullets(self.user2, -1)
                     self.shot_sound.play()
 
         self.aim1.move(keys_pressed)
@@ -186,22 +246,22 @@ class Game:
                 self.time_remaining[player] = max(0, self.time_remaining[player] - 1)  
             self.last_update_time = current_time  
 
-            if self.time_remaining[player]==0:
-                self.running=False
-                self.show_winner()
+        if self.time_remaining[self.user1] == 0 and self.time_remaining[self.user2] == 0:
+            self.running=False
+            self.show_winner()
 
         if self.bullets[self.user1] == 0 and self.bullets[self.user2] == 0:
             self.running = False
             self.show_winner()
             return 
         
-        if self.black_target is None and (current_time - self.last_black_spawn_time >= 25000):
+        if self.black_target is None and (current_time - self.last_black_spawn_time >= 10000):
             # self.black_target = black_target_item(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT//2), (0,0,0))
             x, y = Target.safe_respawn(self.targets + ([self.silver_target] if self.silver_target else []))
             self.black_target = black_target_item(x, y, (0, 0, 0))
             self.black_visible_since = current_time 
         
-        if self.black_target  and (current_time - self.black_visible_since >= 15000):
+        if self.black_target  and (current_time - self.black_visible_since >= 10000):
             self.black_target = None
             self.last_black_spawn_time = current_time 
 
@@ -212,16 +272,16 @@ class Game:
             # self.silver_spawn_time_out = current_time
             self.silver_visible_since = current_time
         
-        if self.silver_target and ( current_time - self.silver_visible_since >= 15000):
+        if self.silver_target and ( current_time - self.silver_visible_since >= 10000):
             self.silver_target = None
             self.last_silver_spawn_time = current_time
 
-        if self.bronze_target is None and (current_time - self.last_bronze_spawn_time >= 20000):
+        if self.bronze_target is None and (current_time - self.last_bronze_spawn_time >= 15000):
             x, y = Target.safe_respawn(self.targets + ([self.black_target] if self.black_target else []) + ([self.silver_target] if self.silver_target else []))
             self.bronze_target = bronze_target_item(x, y, (205, 127, 50))
             self.bronze_visible_since = current_time
 
-        if self.bronze_target and (current_time - self.bronze_visible_since >= 15000):
+        if self.bronze_target and (current_time - self.bronze_visible_since >= 10000):
             self.bronze_target = None
             self.last_bronze_spawn_time = current_time 
 
@@ -235,45 +295,47 @@ class Game:
             self.last_gold_spawn_time = current_time  
 
         for player in [self.user1, self.user2]:
-            if len(self.shots[player]) < 2:  
+            if len(self.shots[player]) == 0:  
                 continue  
 
-            last_shot = self.shots[player][-2]  
-            current_shot = self.shots[player][-1]  
-
+              
+            current_shot = self.shots[player][-1] 
+            last_shot = self.shots[player][-2]  if len(self.shots[player]) >= 2 else current_shot
+            
+            hit_found = False
+            # previous_score = self.scores[player]
             for target in self.targets:  
                 distance = math.dist(current_shot, (target.x, target.y)) 
 
-                if distance <= TARGET_RADIUS:  
-                    shot_distance = math.dist(last_shot, current_shot)  
-                    if isinstance(target, silver_target_item):
-                        self.time_remaining[player] = min(300, self.time_remaining[player] + 10)    
-                    
-                    if shot_distance < 50:
-                        score = 1
-                    elif shot_distance < 100:
-                        score = 2
-                    elif shot_distance < 150:
-                        score = 3
-                    elif shot_distance < 250:
-                        score = 4
-                    else:
-                        score = 5
+                if distance <= TARGET_RADIUS:
+                    shot_distance = math.dist(last_shot, current_shot)
 
-                    self.scores[player] += score  
-                    target.respawn(self.targets)  
-                    print(shot_distance)
-                    break  
+                    score = self.calculate_shot_score(player, shot_distance, self.previous_shot_hit[player])
+                    self.add_score(player, score)
+                    
+
+                    target.respawn(self.targets)
+                    self.set_previous_shot_hit(player, True)
+                    hit_found = True
+                    break
+
+            # if self.scores[player] == previous_score:
+            #     self.previous_shot_hit[player] = False
+        
+            if not hit_found:
+                self.set_previous_shot_hit(player, False)  
+
 
         if self.black_target:
-            self.black_target.move()
+            self.black_target.move()  
 
             for player in [self.user1, self.user2]:
-                distance_aim = math.dist((self.aim1.x, self.aim1.y) if player == self.user1 else (self.aim2.x, self.aim2.y), (self.black_target.x, self.black_target.y))
-                if distance_aim <= TARGET_RADIUS:
-                    self.time_remaining[player] = max(0, self.time_remaining[player] - self.black_target.time_penalty)
-                    self.black_target = None
-                    self.last_black_spawn_time = current_time
+                if self.black_target is not None:
+                    distance_aim = math.dist((self.aim1.x, self.aim1.y) if player == self.user1 else (self.aim2.x, self.aim2.y), (self.black_target.x, self.black_target.y))
+                    if distance_aim <= TARGET_RADIUS:
+                        self.time_remaining[player] = max(0, self.time_remaining[player] - self.black_target.time_penalty)
+                        self.black_target = None
+                        self.last_black_spawn_time = current_time
 
         for player in [self.user1, self.user2]:
             if self.silver_target:
@@ -334,6 +396,13 @@ class Game:
     def show_winner(self):
         self.end_game_sound.play()
         self.screen.fill((255,255,255))
+
+        if self.scores[self.user1] > self.scores[self.user2]:
+            save_winner(self.user1, self.scores[self.user1])
+        elif self.scores[self.user1] < self.scores[self.user2]:
+            save_winner(self.user2, self.scores[self.user2])
+
+
         winner_text="Game Over! "
         if self.scores[self.user1]>self.scores[self.user2]:
             winner_text += f"{self.user1} Won!"
@@ -343,7 +412,8 @@ class Game:
             winner_text+="It's a Tie!"   
 
         text_surface= self.font.render(winner_text, True, (255,0,0))
-        self.screen.blit(text_surface, (SCREEN_WIDTH//2 - 100 , SCREEN_HEIGHT//2))  
+        text_rect = text_surface.get_rect(center=(400, 300))
+        self.screen.blit(text_surface, text_rect)  
         pygame.display.flip()
         pygame.time.delay(5000)
         pygame.quit() 
