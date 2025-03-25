@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from game_logic import Game, SCREEN_WIDTH, SCREEN_HEIGHT 
+from show_winners import show_top_players
 
 # Colors
 DARK_RED = (139, 0, 0)
@@ -70,6 +71,7 @@ class Button:
     
 class LoginPage:
     def __init__(self, width, height):
+        pygame.init()
         pygame.mixer.init()
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Login Page")
@@ -79,9 +81,11 @@ class LoginPage:
 
         self.start_login_sound.play()
         self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 32)
         self.input_box1 = InputBox(300, 200, 200, 32, "User 1:", self.click_sound)
         self.input_box2 = InputBox(300, 300, 200, 32, "User 2:", self.click_sound)
         self.continue_button = Button(300, 400, 200, 50, "Continue", self.click_sound)
+        self.top_players_button = Button(300, 470, 200, 50, "Top Players", self.click_sound, (70, 70, 70))
         self.running = True
         self.error_message = ""
         self.new_users = []
@@ -91,8 +95,7 @@ class LoginPage:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                    pygame.quit()
-                    sys.exit()
+                    break
 
                 self.input_box1.handle_event(event)
                 self.input_box2.handle_event(event)
@@ -103,26 +106,54 @@ class LoginPage:
                         self.save_usernames()
                         self.running = False  
                         self.start_game()
+                        self.__init__(800, 600)
+                        self.running = True
                     else:
-                        self.screen.fill(DARK_RED)
-                        self.input_box1.draw(self.screen)
-                        self.input_box2.draw(self.screen)
-                        self.continue_button.draw(self.screen)
+                        self.show_error()
+
+                if self.top_players_button.is_clicked(event):
+                    self.click_sound.play()
+                    if not show_top_players(self.screen, self.font, self.clock):
+                        self.running = False
+                        break
+
+                    self.screen.fill(DARK_RED)
+                    self.input_box1.draw(self.screen)
+                    self.input_box2.draw(self.screen)
+                    self.continue_button.draw(self.screen)
+                    self.top_players_button.draw(self.screen)
+
+                    if self.error_message:
                         error_surface = ERROR_FONT.render(self.error_message, True, WHITE)
-                        self.screen.blit(error_surface, (300, 460))
-                        pygame.display.flip()
+                        self.screen.blit(error_surface, (300, 540))
+                    pygame.display.flip()
+
+            if not self.running:
+                break
 
             self.screen.fill(DARK_RED)
             self.input_box1.draw(self.screen)
             self.input_box2.draw(self.screen)
             self.continue_button.draw(self.screen)
-            
+            self.top_players_button.draw(self.screen)
+
             if self.error_message:
                 error_surface = ERROR_FONT.render(self.error_message, True, WHITE)
-                self.screen.blit(error_surface, (300, 460))
+                self.screen.blit(error_surface, (300, 540))
 
             pygame.display.flip()
             self.clock.tick(30)
+        
+        pygame.quit()
+        
+    def show_error(self):
+        self.screen.fill(DARK_RED)
+        self.input_box1.draw(self.screen)
+        self.input_box2.draw(self.screen)
+        self.continue_button.draw(self.screen)
+        error_surface = ERROR_FONT.render(self.error_message, True, WHITE)
+        self.screen.blit(error_surface, (300, 460))
+        pygame.display.flip()
 
     def validate_usernames(self):
         global user1
