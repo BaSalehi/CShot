@@ -5,12 +5,14 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime
 
-
+# color constants
 DARK_RED = (139, 0, 0)
 BLACK = (0, 0, 0)
 BLUE_HEADER = (0, 0, 128)
 
+# function to display the top 3 players from the database
 def show_top_players(screen, font, clock):
+    #sqlalchemy setup for saving game winners
     Base = declarative_base()
 
     class Winner(Base):
@@ -21,12 +23,15 @@ def show_top_players(screen, font, clock):
         game_date = Column(DateTime, default=datetime.utcnow)
 
     try:
+        #Connect to the PostgreSQL database
         engine = create_engine('postgresql+pg8000://postgres:0880450789asnii@localhost/cshot_winners')
         Session = sessionmaker(bind=engine)
         session = Session()
 
+        #query the top 3 players by highest score
         winners = session.query(Winner).order_by(Winner.score.desc()).limit(3).all()
         
+        # Pygame window for showing the leaderboard
         pygame.init()
         SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -36,18 +41,21 @@ def show_top_players(screen, font, clock):
 
         running = True
 
+        # main loop for displaying the top 3 players
         while running:
             screen.fill(DARK_RED)
 
             title = font.render("Top 3 Players", True, BLACK)
             screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 20))
 
+            # draw headers for Rank, Player Name, Score, and Date
             headers = ["Rank", "Player", "Score", "Date"]
             header_x = [50, 200, 350, 500]
             for i, header in enumerate(headers):
                 header_text = font.render(header, True, BLUE_HEADER)
                 screen.blit(header_text, (header_x[i], 100))
 
+            #display each player's data in rows
             y_offset = 120
             for i, winner in enumerate(winners, 1):
                 rank_text = font.render(str(i), True, BLACK)
@@ -61,6 +69,7 @@ def show_top_players(screen, font, clock):
                 screen.blit(date_text, (header_x[3], y_offset))
                 y_offset += 50
 
+            #display a hint at the bottom for how to exit
             hint_font = pygame.font.Font(None, 24)
             hint_text = hint_font.render("Press ESC or close window to return", True, BLACK)
             screen.blit(hint_text, (SCREEN_WIDTH//2 - hint_text.get_width()//2, SCREEN_HEIGHT - 40))
@@ -75,14 +84,16 @@ def show_top_players(screen, font, clock):
             pygame.display.flip()
             clock.tick(30)
 
+        # close the database session after use
         session.close()
         return True
     
     except Exception as e:
+        #print any errors that occur
         print(f"Error showing top 3 players: {e}")
         return True
     
-
+# If the script is run directly, initialize pygame and show top players
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
