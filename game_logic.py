@@ -2,13 +2,14 @@ import pygame
 import random
 import time
 import math
-#initialize pygame clock
-clock=pygame.time.Clock()
-
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+
+#initialize pygame clock
+clock=pygame.time.Clock()
+
 #sqlalchemy setup for saving game winners
 Base = declarative_base()
 
